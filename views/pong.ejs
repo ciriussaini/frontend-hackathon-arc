@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- meta tags are not necessary here, but having them always is a good practice -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- title -->
+    <title>Ping Pong</title>
+    <!-- some css styles -->
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+      }
+      
+      body {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <div class="col-sm-4">
+        <p>
+        <h3>
+          Ping Pong  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <b><span id="right" align="right">High Score: 35</span></b>
+        </h3>
+        
+      </p>
+        <br>
+      </div>
+      <div class="col-sm-8">
+        <canvas id="canvas" width="600" height="400"></canvas>
+      </div>
+    </div>
+
+    <!-- our "canvas" where we draw things-->
+  
+
+    <!-- link to script.js -->
+    <script type="text/javascript" src="js/scriptPong.js"></script>
+  </body>
+</html>
+

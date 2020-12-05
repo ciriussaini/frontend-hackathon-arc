@@ -1,0 +1,133 @@
+# This is the .gitlab-ci.yml file, which defines the pipeline for your project.
+#
+# Example test, build, and publish steps for the sample Python webapp are
+# included below. You do not have to use the same stages or jobs in your
+# hackathon app.
+#
+# Although the process defined below is suitable for hackathon apps, it is
+# missing steps required by our compliance requirements for production software.
+#
+# The Infrastructure teams have been working on the components necessary for
+# deploying apps to production from GitLab. Infra will announce when these steps
+# are available.
+#
+# For more information about .gitlab-ci.yml, see
+# https://docs.gitlab.com/ee/ci/yaml/.
+
+# GitLab CI jobs can be broken into stages. Jobs within the same stage can be
+# executed in parallel.
+stages:
+  - test
+  - build
+  - publish
+
+# The default section sets defaults for the jobs listed below.
+default:
+  # In this case, we set the default image to one which contains poetry, to
+  # avoid the need to install poetry in each step below. Unless you use poetry,
+  # you don't need this.
+  #
+  # If you do use poetry, note that this image URL is temporary. All images used
+  # in production by Arcesium should exist in ECR.
+  image: 674283286888.dkr.ecr.us-east-1.amazonaws.com/core-infra/node:$MAJOR
+  # Run all steps with a runner which uses the "hackathon" identity, unless
+  # otherwise specified.
+  tags:
+    - identity-hackathon
+
+############
+# test stage
+############
+# These tests run within the image specified as the default above. This is okay,
+# since all of the tests included here are third-party tools running against the
+# codebase. If we were running unit tests, integration tests, or other
+# functional tests, it'd be wise to consider running them using the built
+# container image. This would ensure the test environment is equivalent to the
+# runtime environment.
+#
+# Run mypy, for Python static type checking
+
+# This folder is cached between builds
+# http://docs.gitlab.com/ee/ci/yaml/README.html#cache
+cache:
+  paths:
+    - node_modules/
+
+test_async:
+  script:
+    - npm install
+    - npm install express socket.io body-parser --save
+    - node ./server.js 
+
+
+#############
+# build stage
+#############
+# Kaniko is a tool used to build container images within a Kubernetes pod. Since
+# our GitLab CI jobs run within Kubernetes, we use kaniko to build images.
+#
+# We separate the build jobs into build, and build_tag. The former runs for
+# every push - except for tags - creating an image labelled with the latest
+# commit's SHA short. The latter runs for tag pushes only, and labels the image
+# with the git tag.
+#
+# By default, kaniko pushes images to a registry. We use GitLab's built-in
+# registry here, and use a separate step (below) to copy the image to ECR.
+#
+# For more information about the $CI_* variables, see
+# https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+build:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  except:
+    - tags
+  tags:
+    # This is required due to a bug in Kaniko - see https://github.com/GoogleContainerTools/kaniko/issues/1353
+    - default
+
+build_tag:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+  only:
+    - tags
+  tags:
+    - default
+
+###############
+# publish stage
+###############
+# Kaniko cannot publish to ECR, since we consider pushes to ECR to be
+# privileged. If kaniko was allowed to push to ECR, a user could accidentally
+# push to the wrong repository within our ECR registry, causing all sorts of
+# issues.
+#
+# To mitigate this, and safely permit other privileged operations, core infra
+# has developed "pipelineglue". Using pipelineglue, developers can trigger
+# privileged pipeline primitives (PPPs) from their pipelines.
+publish_tag_image_to_ecr:
+  stage: publish
+  image: 674283286888.dkr.ecr.us-east-1.amazonaws.com/gitlab/arcesium/internal/infra/coreinfra/pipelineglue-client:1.1.0
+  script:
+    - pipelineglue --param IMAGE_TAG=${CI_COMMIT_TAG} arcesium/internal/shared/gitlab-primitives/privileged/publish-image-to-ecr
+  only:
+    # Only git tag images get published to ECR.
+    - tags
+####################
+# To be continued...
+####################
+# As mentioned at the top of this file, the Infrastructure teams have been
+# working on the components necessary for deploying apps to production from
+# GitLab. Eventually, you can expect to see a deployment stage here.
+#
+# Until then, follow the instructions in the [README](README.md) to deploy your
+# hackathon application to Kubernetes.
